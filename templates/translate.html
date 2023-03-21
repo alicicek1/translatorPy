@@ -5,12 +5,11 @@
     <title>Translation App</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
 </head>
 <body>
 <div class="container mt-5">
     <h1 class="mb-4">Translation App</h1>
-    <form id="translate-form" class="mb-4">
+    <form id="translate-form">
         <div class="form-row">
             <div class="col">
                 <select id="langFrom" class="form-control" required>
@@ -25,7 +24,6 @@
                     <option value="zh-TW">Chinese (Traditional)</option>
                     <option value="it">Italian</option>
                     <option value="pt">Portuguese</option>
-                    <!-- add more options for other languages as needed -->
                 </select>
             </div>
             <div class="col">
@@ -41,7 +39,6 @@
                     <option value="zh-TW">Chinese (Traditional)</option>
                     <option value="it">Italian</option>
                     <option value="pt">Portuguese</option>
-                    <!-- add more options for other languages as needed -->
                 </select>
             </div>
         </div>
@@ -59,12 +56,9 @@
                 </button>
             </div>
         </div>
-        <div class="col-sm-12 text-right">
-            <button type="submit" class="btn btn-primary btn-sm btn-block">Translate</button>
-        </div>
+        <button type="submit" class="btn btn-primary btn-sm btn-block">Translate</button>
         <div id="error-display" style="display: none;"></div>
     </form>
-
 </div>
 <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
@@ -72,111 +66,85 @@
 <script src="https://cdn.jsdelivr.net/npm/cld@2.0.4/dist/cld2.min.js"></script>
 <script>
     window.addEventListener('load', () => {
-            const form = document.getElementById('translate-form');
-            const translation = document.getElementById('translation');
-            const textInput = document.getElementById('text');
-            const startRecognitionBtn = document.getElementById('start-recognition');
-            const readTranslationBtn = document.getElementById('read-translation');
-            const errorDisplay = document.getElementById('error-display');
+        const form = document.getElementById('translate-form');
+        const translation = document.getElementById('translation');
+        const textInput = document.getElementById('text');
+        const startRecognitionBtn = document.getElementById('start-recognition');
+        const readTranslationBtn = document.getElementById('read-translation');
+        const errorDisplay = document.getElementById('error-display');
+        const langFromDropdown = document.getElementById('langFrom');
+        const langToDropdown = document.getElementById('langTo');
 
-            const SpeechRecognition = window.speechRecognition || window.webkitSpeechRecognition;
-            let recognition = new SpeechRecognition();
+        let langFrom = null;
+        let langTo = null;
+        let translatedData = null;
 
-            let langFrom = null;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = new SpeechRecognition();
 
-            const langFromDropdown = document.getElementById('langFrom');
-            langFromDropdown.addEventListener('change', () => {
-                langFrom = langFromDropdown.value;
-                recognition.lang = getRecognitionLangCode(langFrom); // Update recognition language based on the selected language
-            });
+        recognition.addEventListener('result', (event) => {
+            textInput.value = event.results[0][0].transcript;
+        });
 
-            startRecognitionBtn.addEventListener('click', () => {
-                if (langFrom) {
-                    recognition.start();
-                } else {
-                    showError('Please select a language before starting speech recognition');
-                }
-            });
+        langFromDropdown.addEventListener('change', () => {
+            langFrom = langFromDropdown.value;
+            recognition.lang = getRecognitionLangCode(langFrom);
+        });
 
+        startRecognitionBtn.addEventListener('click', () => {
+            langFrom ? recognition.start() : showError('Please select a language before starting speech recognition');
+        });
 
-            let langTo = null;
-            const langToDropdown = document.getElementById('langTo')
-            let translatedData = null;
-            readTranslationBtn.addEventListener('click', () => {
-                if (translatedData != null) {
-                    langTo = langToDropdown.value;
-                    const utterance = new SpeechSynthesisUtterance(translatedData);
-                    utterance.lang = getRecognitionLangCode(langTo);
-                    speechSynthesis.speak(utterance);
-                } else {
-                    showError("Haven't translated yet.")
-                }
-            });
-
-            recognition.addEventListener('result', (event) => {
-                const transcript = event.results[0][0].transcript;
-                textInput.value = transcript;
-            });
-
-            form.addEventListener('submit', async (event) => {
-                event.preventDefault();
-
-                if (langFrom && textInput.value.trim() !== '') {
-                    const text = textInput.value;
-
-                    const queryParams = new URLSearchParams({
-                        langFrom: langFrom,
-                        langTo: langToDropdown.value,
-                        text: text
-                    });
-
-                    const response = await fetch(`/translate/?${queryParams.toString()}`);
-                    const responseBody = await response.text();
-
-                    const data = JSON.parse(responseBody);
-                    translation.innerText = data.translatedText;
-                    translatedData = data.translatedText;
-                } else {
-                    showError('Please select a language and enter text before translating');
-                }
-            });
-
-            function getRecognitionLangCode(lang) {
-                switch (lang) {
-                    case 'en':
-                        return 'en-US';
-                    case 'tr':
-                        return 'tr-TR';
-                    case 'es':
-                        return 'es-ES';
-                    case 'fr':
-                        return 'fr-FR';
-                    case 'ja':
-                        return 'ja-JP';
-                    case 'de':
-                        return 'de-DE';
-                    case 'zh-CN':
-                        return 'zh-CN';
-                    case 'zh-TW':
-                        return 'zh-TW';
-                    case 'it':
-                        return 'it-IT';
-                    case 'pt':
-                        return 'pt-PT';
-                    default:
-                        return 'en-US'; // default to English if the language
-                }
+        readTranslationBtn.addEventListener('click', () => {
+            if (translatedData) {
+                const utterance = new SpeechSynthesisUtterance(translatedData);
+                utterance.lang = getRecognitionLangCode(langToDropdown.value);
+                speechSynthesis.speak(utterance);
+            } else {
+                showError("Haven't translated yet.")
             }
+        });
 
-            function showError(message) {
-                errorDisplay.innerText = message;
-                errorDisplay.style.display = 'block';
-                setTimeout(() => { // Hide the error message after a few seconds
-                    errorDisplay.style.display = 'none';
-                }, 5000);
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            if (langFrom && textInput.value.trim() !== '') {
+                const response = await fetch(`/translate/?langFrom=${langFrom}&langTo=${langToDropdown.value}&text=${textInput.value}`);
+                const {translatedText} = await response.json();
+
+                translation.innerText = translatedText;
+                translatedData = translatedText;
+            } else {
+                showError('Please select a language and enter text before translating');
             }
+        });
+
+        function getRecognitionLangCode(lang) {
+            const languageCodes = {
+                en: 'en-US',
+                tr: 'tr-TR',
+                es: 'es-ES',
+                fr: 'fr-FR',
+                ja: 'ja-JP',
+                de: 'de-DE',
+                'zh-CN': 'zh-CN',
+                'zh-TW': 'zh-TW',
+                it: 'it-IT',
+                pt: 'pt-PT',
+                default: 'en-US',
+            };
+
+            return languageCodes[lang] || languageCodes.default;
         }
-    )
+
+        function showError(message) {
+            errorDisplay.innerText = message;
+            errorDisplay.style.display = 'block';
+            setTimeout(() => {
+                errorDisplay.style.display = 'none';
+            }, 5000);
+        }
+    });
 </script>
 </body>
 </html>
